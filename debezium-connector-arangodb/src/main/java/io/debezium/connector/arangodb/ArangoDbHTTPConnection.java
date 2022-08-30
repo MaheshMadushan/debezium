@@ -1,9 +1,11 @@
 package io.debezium.connector.arangodb;
 
 import com.arangodb.Protocol;
+import com.arangodb.internal.ArangoDefaults;
 import com.arangodb.internal.http.HttpConnection;
 import com.arangodb.internal.http.HttpConnectionFactory;
 import com.arangodb.internal.net.HostDescription;
+import com.arangodb.mapping.ArangoJack;
 import com.arangodb.util.ArangoSerialization;
 import org.apache.http.client.HttpRequestRetryHandler;
 
@@ -24,7 +26,7 @@ public class ArangoDbHTTPConnection implements ArangoDbConnection{
     private final Map<List<String>, ArangoDbConnection> connections = new ConcurrentHashMap<>();
 
     @Override
-    public ArangoDbConnection getConnectionFor(String serverAddress) {
+    public ArangoDbConnection getConnectionFor(String host) {
         return null;
     }
 
@@ -106,6 +108,24 @@ public class ArangoDbHTTPConnection implements ArangoDbConnection{
         }
     }
 
+    public static class HTTPConnectionSettingsBuilder{
+        HTTPConnectionSettings settings = new HTTPConnectionSettings();
+
+        public HTTPConnectionSettings build(){
+            return settings.setContentType(com.arangodb.Protocol.HTTP_JSON)
+                    .setUseSsl(ArangoDefaults.DEFAULT_USE_SSL) // null for now
+                    .setHostnameVerifier(null) // null for now TODO : implement HostnameVerifier
+                    .setPassword(null) // null for now TODO : implement a method to set password
+                    .setHttpRequestRetryHandler(null)
+                    .setUser(ArangoDefaults.DEFAULT_USER)
+                    .setTtl(null)
+                    .setHttpCookieSpec(null)
+                    .setTimeout(ArangoDefaults.DEFAULT_TIMEOUT)
+                    .setUtil(new ArangoJack())
+                    .setHost(new HostDescription(ArangoDefaults.DEFAULT_HOST, ArangoDefaults.DEFAULT_PORT));
+        }
+    }
+
     public static class Builder{
         private HTTPConnectionSettings settings;
 
@@ -115,6 +135,11 @@ public class ArangoDbHTTPConnection implements ArangoDbConnection{
         }
 
         public HttpConnection build(){
+
+            if(settings == null){
+                this.settings = new HTTPConnectionSettingsBuilder().build();
+            }
+
             return (HttpConnection) new HttpConnectionFactory(
                     settings.timeout,
                     settings.user,
